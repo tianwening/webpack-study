@@ -1,4 +1,5 @@
 const webpack = require("./my-webpack")
+// const webpack = require("webpack")
 const config = require("./webpack.config")
 
 const complier = webpack(config)

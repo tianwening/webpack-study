@@ -3,13 +3,14 @@ const RunWebpackPLugin = require("./plugins/run-webpack-plugin")
 const DoneWebpackPLugin = require("./plugins/done-webpack-plugin")
 
 module.exports = {
+    mode: 'development',
     entry: {
         entry1: './src/entry1.js',
         entry2: './src/entry2.js'
     },
     output: {
         path: path.resolve(__dirname, 'dist'),
-        filename: 'bundle.js'
+        filename: '[name].js'
     },
     resolve: {
         extensions: ['', '.js', '.json']

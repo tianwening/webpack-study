@@ -23,7 +23,7 @@ class Compilation {
         // 本次编译涉及了哪些文件
         this.fileDependencies = new Set()
     }
-    build() {
+    build(callback) {
         // 5.根据配置文件找到所有的入口
         let entry = {}
         if (typeof this.options.entry == 'string') {
@@ -39,12 +39,31 @@ class Compilation {
             // 把入口文件的绝对路径添加到依赖数组里面去
             this.fileDependencies.add(entryFilePath)
             let entryModule = this.buildModule(entryName, entryFilePath)
-            this.modules.push(entryModule)
+            // this.modules.push(entryModule)
+            // 8. 把所有的模块编译完成后，再根据模块之间的关系，组装成一个个包含多个模块的依赖的chunk
+            let chunk = {
+                name: entryName,
+                entryModule,
+                modules: this.modules.filter(module => module.names.includes(entryName))
+            }
+            this.chunks.push(chunk)
         }
-        console.log(this.modules)
+
+        // 9. 把各个代码块chunk转换成一个个的文件，添加到asset列表当中去
+        this.chunks.forEach(chunk => {
+            const filename = this.options.output.filename.replace('[name]', chunk.name)
+            this.assets[filename] = getSource(chunk)
+        })
+
+        // 执行完成的回调
+        callback(null, {
+            chunks: this.chunks,
+            modules: this.modules,
+            assets: this.assets
+        }, this.fileDependencies)
     }
+
     buildModule(name, modulePath) {
-        console.log(modulePath)
         // 读取文件的真实内容
         let moduleSourceCode = fs.readFileSync(modulePath, 'utf-8')
         // 找到合适的loader对源码进行翻译和转换
@@ -62,6 +81,7 @@ class Compilation {
         const moduleId = './' + path.posix.relative(baseDir, modulePath)
         const module = { id: moduleId, dependencies: [], names: [name] }
         const ast = parser.parse(moduleSourceCode, { sourceType: 'module' })
+        // 7. 找到此模块依赖的模块，再递归本步骤找到依赖的模块进行编译
         traverse(ast, {
             CallExpression: ({ node }) => {
                 // 表示有其他模块的引入
@@ -101,6 +121,34 @@ class Compilation {
 
         return module
     }
+}
+
+function getSource(chunk) {
+    return `
+    (() => {
+        var __webpack_modules__ = ({
+            ${chunk.modules.map(module => `
+                "${module.id}": (module, exports, require) => {
+                    ${module._source}
+                },
+            `)}
+        });
+        var cache = {};
+        function require(moduleId) {
+            var cachedModule = cache[moduleId];
+            if (cachedModule !== undefined) {
+                return cachedModule.exports;
+            }
+            var module = cache[moduleId] = {
+                exports: {}
+            };
+            __webpack_modules__[moduleId](module, module.exports, require);
+            return module.exports;
+        }
+        ${chunk.entryModule._source}
+    })()
+        ;
+    `
 }
 
 // 不全后缀看文件存不存在
