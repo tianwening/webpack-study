@@ -18,8 +18,7 @@ function webpack(options = {}) {
         // 将编译器传递给相关的插件
         plugin.apply(compiler)
     })
-    // 4.开始执行编译
-    compiler.run()
+    return compiler
 }
 
 module.exports = webpack

@@ -1,5 +1,7 @@
 ## 1. shell和配置文件合并， 产出最终的一个配置
 ## 2. 初始化complier对象
+ - options
+ - hooks
 ## 3. 遍历插件进行调用
 ## 4. 执行complier对象的run方法开始执行编译
 ## 5. 根据配置项里面的entry找到所有的入口
